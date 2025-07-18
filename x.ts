@@ -1,21 +1,23 @@
 // dashboard.component.ts
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { Chart, registerables } from 'chart.js';
-
-// angular-calendar imports
 import {
   CalendarModule,
-  CalendarView,
   CalendarEvent,
   DateAdapter,
 } from 'angular-calendar';
 import { adapterFactory } from 'angular-calendar/date-adapters/date-fns';
 
+interface WeeklyAppointmentData {
+  week: string;
+  total: number;
+}
+
 interface Appointment {
-  appointment_date: string;   // "YYYY-MM-DD"
-  status: 'Approved'|'Pending'|'Rejected';
+  appointment_date: string;              // "YYYY-MM-DD"
+  status: 'Approved' | 'Pending' | 'Rejected';
 }
 
 @Component({
@@ -23,6 +25,7 @@ interface Appointment {
   standalone: true,
   imports: [
     CommonModule,
+    HttpClientModule,
     CalendarModule.forRoot({ provide: DateAdapter, useFactory: adapterFactory }),
   ],
   templateUrl: './dashboard.component.html',
@@ -33,10 +36,10 @@ export class DashboardComponent implements OnInit {
   private chartRef!: ElementRef<HTMLCanvasElement>;
   private chart?: Chart;
 
-  // for Chart.js:
-  weeklyData: { week: string; total: number }[] = [];
+  // Chart data
+  weeklyData: WeeklyAppointmentData[] = [];
 
-  // for calendar:
+  // Calendar data
   viewDate: Date = new Date();
   events: CalendarEvent[] = [];
 
@@ -44,46 +47,70 @@ export class DashboardComponent implements OnInit {
     Chart.register(...registerables);
   }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadChartData();
     this.loadAppointments();
   }
 
-  private loadChartData() {
+  /** Re-fetch both chart and calendar data */
+  refresh(): void {
+    this.loadChartData();
+    this.loadAppointments();
+  }
+
+  /** Load weekly summary for Chart.js */
+  private loadChartData(): void {
     this.http
-      .get<{ success: boolean; data: { week: string; total: number }[] }>(
-        `http://localhost:5000/api/appointments/weekly-summary-raw/22`
+      .get<{ success: boolean; data: WeeklyAppointmentData[] }>(
+        'http://localhost:5000/api/appointments/weekly-summary-raw/22'
       )
       .subscribe(res => {
-        if (!res.success) return;
+        if (!res.success || !res.data.length) {
+          console.warn('No weekly summary data');
+          return;
+        }
         this.weeklyData = res.data;
-        const labels = res.data.map(d => d.week);
-        const totals = res.data.map(d => d.total);
-        this.chart?.destroy();
-        this.chart = new Chart(this.chartRef.nativeElement, {
-          type: 'bar',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Appointments',
-              data: totals,
-              backgroundColor: 'rgba(98,0,238,0.7)',
-              borderColor: 'rgba(98,0,238,1)',
-              borderWidth: 1
-            }]
-          },
-          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-        });
+        this.renderChart();
       });
   }
 
-  private loadAppointments() {
+  /** Render or re-render the Chart.js bar chart */
+  private renderChart(): void {
+    const labels = this.weeklyData.map(d => d.week);
+    const totals = this.weeklyData.map(d => d.total);
+
+    this.chart?.destroy();
+    this.chart = new Chart(this.chartRef.nativeElement, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Appointments',
+          data: totals,
+          backgroundColor: 'rgba(98, 0, 238, 0.7)',
+          borderColor:  'rgba(98, 0, 238, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  /** Load full appointments for the calendar */
+  private loadAppointments(): void {
     this.http
       .get<{ success: boolean; data: Appointment[] }>(
-        `http://localhost:5000/api/appointments/22`
+        'http://localhost:5000/api/appointments/22'
       )
       .subscribe(res => {
-        if (!res.success) return;
+        if (!res.success) {
+          console.warn('No appointments data');
+          return;
+        }
         this.events = res.data.map(a => ({
           start: new Date(a.appointment_date),
           title: a.status,
@@ -92,7 +119,8 @@ export class DashboardComponent implements OnInit {
       });
   }
 
-  private getStatusClass(status: Appointment['status']) {
+  /** Map status to a CSS class for coloring */
+  private getStatusClass(status: Appointment['status']): string {
     switch (status) {
       case 'Approved': return 'approved-event';
       case 'Pending':  return 'pending-event';
@@ -101,10 +129,29 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  refresh() {
-    this.loadChartData();
-    this.loadAppointments();
+  /** Quick‐stats helpers */
+  getTotalAppointments(): number {
+    return this.weeklyData.reduce((sum, d) => sum + d.total, 0);
   }
 
-  // … your four stat getters (getTotalAppointments(), etc.) …
+  getAveragePerWeek(): number {
+    return this.weeklyData.length
+      ? Math.round(this.getTotalAppointments() / this.weeklyData.length)
+      : 0;
+  }
+
+  getPeakWeek(): string {
+    if (!this.weeklyData.length) return '-';
+    const peak = this.weeklyData.reduce((prev, curr) =>
+      curr.total > prev.total ? curr : prev
+    );
+    return peak.week;
+  }
+
+  getGrowthTrend(): string {
+    if (this.weeklyData.length < 2) return 'N/A';
+    const first = this.weeklyData[0].total;
+    const last  = this.weeklyData[this.weeklyData.length - 1].total;
+    return last > first ? 'Upward' : last < first ? 'Downward' : 'Stable';
+  }
 }
