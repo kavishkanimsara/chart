@@ -1,9 +1,45 @@
+<!-- dashboard.component.html -->
 <div class="container-fluid mt-4">
-  <!-- Quick stats + chart col -->
   <div class="row">
+    <!-- LEFT: Quick Statistics + Chart -->
     <div class="col-md-6">
-      <!-- Quick Statistics card… (same as you already have) -->
-      <div class="summary-card mb-4">…</div>
+      <!-- Quick Statistics Card -->
+      <div class="summary-card mb-4">
+        <div class="summary-header">
+          <h6 class="summary-title">
+            <i class="bi bi-clipboard-data me-2"></i>
+            Quick Statistics
+          </h6>
+        </div>
+        <div class="summary-body">
+          <div class="row text-center">
+            <div class="col-6 col-sm-3 mb-3">
+              <div class="stat-item">
+                <div class="stat-number">{{ getTotalAppointments() }}</div>
+                <div class="stat-label">Total Appointments</div>
+              </div>
+            </div>
+            <div class="col-6 col-sm-3 mb-3">
+              <div class="stat-item">
+                <div class="stat-number">{{ getAveragePerWeek() }}</div>
+                <div class="stat-label">Avg per Week</div>
+              </div>
+            </div>
+            <div class="col-6 col-sm-3 mb-3">
+              <div class="stat-item">
+                <div class="stat-number">{{ getPeakWeek() }}</div>
+                <div class="stat-label">Peak Week</div>
+              </div>
+            </div>
+            <div class="col-6 col-sm-3 mb-3">
+              <div class="stat-item">
+                <div class="stat-number">{{ getGrowthTrend() }}</div>
+                <div class="stat-label">Growth Trend</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Chart -->
       <div class="dashboard-chart p-4">
@@ -15,16 +51,32 @@
       </div>
     </div>
 
-    <!-- Calendar col -->
+    <!-- RIGHT: Month‑View Calendar -->
     <div class="col-md-6">
-      <h6 class="mb-3"><i class="bi bi-calendar-event me-1"></i>Appointments Calendar</h6>
-      <mat-calendar [dateClass]="dateClass"></mat-calendar>
+      <h6 class="mb-3">
+        <i class="bi bi-calendar-event me-1"></i>
+        Appointments Calendar
+      </h6>
+      <mwl-calendar-month-view
+        [viewDate]="viewDate"
+        [events]="events"
+        [activeDayIsOpen]="false">
+      </mwl-calendar-month-view>
 
-      <!-- optional legend -->
-      <div class="d-flex justify-content-around mt-2">
-        <div><span class="badge bg-success">&nbsp;</span> Approved</div>
-        <div><span class="badge bg-warning text-dark">&nbsp;</span> Pending</div>
-        <div><span class="badge bg-danger">&nbsp;</span> Rejected</div>
+      <!-- Legend -->
+      <div class="d-flex justify-content-around mt-3">
+        <div>
+          <span class="badge bg-success">&nbsp;&nbsp;</span>
+          Approved
+        </div>
+        <div>
+          <span class="badge bg-warning text-dark">&nbsp;&nbsp;</span>
+          Pending
+        </div>
+        <div>
+          <span class="badge bg-danger">&nbsp;&nbsp;</span>
+          Rejected
+        </div>
       </div>
     </div>
   </div>
