@@ -1,22 +1,21 @@
+// dashboard.component.ts
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Chart, registerables } from 'chart.js';
 
-// Angular Material calendar
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+// angular-calendar imports
+import {
+  CalendarModule,
+  CalendarView,
+  CalendarEvent,
+  DateAdapter,
+} from 'angular-calendar';
+import { adapterFactory } from 'angular-calendar/date-adapters/date-fns';
 
-interface WeeklyAppointmentData { /*…as before…*/ }
 interface Appointment {
-  id: number;
-  player_id: number;
-  health_officer_id: string;
-  appointment_date: string;    // "YYYY-MM-DD"
-  appointment_time: string;    // "HH:mm:ss"
-  reason: string;
-  action: string;
-  status: 'Approved' | 'Pending' | 'Rejected';
+  appointment_date: string;   // "YYYY-MM-DD"
+  status: 'Approved'|'Pending'|'Rejected';
 }
 
 @Component({
@@ -24,9 +23,7 @@ interface Appointment {
   standalone: true,
   imports: [
     CommonModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    /* plus any other modules you need (FormsModule, etc.) */
+    CalendarModule.forRoot({ provide: DateAdapter, useFactory: adapterFactory }),
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
@@ -36,46 +33,78 @@ export class DashboardComponent implements OnInit {
   private chartRef!: ElementRef<HTMLCanvasElement>;
   private chart?: Chart;
 
-  weeklyData: WeeklyAppointmentData[] = [];
-  appointments: Appointment[] = [];
-  private statusMap = new Map<string, Appointment['status']>();
+  // for Chart.js:
+  weeklyData: { week: string; total: number }[] = [];
+
+  // for calendar:
+  viewDate: Date = new Date();
+  events: CalendarEvent[] = [];
 
   constructor(private http: HttpClient) {
     Chart.register(...registerables);
   }
 
   ngOnInit() {
-    this.loadChart();
+    this.loadChartData();
     this.loadAppointments();
   }
 
-  /** your existing chart loader… */
-  private loadChart() { /*…*/ }
-
-  /** new: load raw appointments for the calendar */
-  private loadAppointments() {
-    const url = `http://localhost:5000/api/appointments/22`;
-    this.http.get<{ success: boolean; data: Appointment[] }>(url)
+  private loadChartData() {
+    this.http
+      .get<{ success: boolean; data: { week: string; total: number }[] }>(
+        `http://localhost:5000/api/appointments/weekly-summary-raw/22`
+      )
       .subscribe(res => {
         if (!res.success) return;
-        this.appointments = res.data;
-        this.statusMap.clear();
-        for (const a of this.appointments) {
-          this.statusMap.set(a.appointment_date, a.status);
-        }
+        this.weeklyData = res.data;
+        const labels = res.data.map(d => d.week);
+        const totals = res.data.map(d => d.total);
+        this.chart?.destroy();
+        this.chart = new Chart(this.chartRef.nativeElement, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Appointments',
+              data: totals,
+              backgroundColor: 'rgba(98,0,238,0.7)',
+              borderColor: 'rgba(98,0,238,1)',
+              borderWidth: 1
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
       });
   }
 
-  /** tells <mat-calendar> which CSS class to apply on each date cell */
-  dateClass = (d: Date) => {
-    const iso = d.toISOString().slice(0,10);      // "YYYY-MM-DD"
-    const status = this.statusMap.get(iso);
-    return status ? status.toLowerCase() + '-date' : '';
+  private loadAppointments() {
+    this.http
+      .get<{ success: boolean; data: Appointment[] }>(
+        `http://localhost:5000/api/appointments/22`
+      )
+      .subscribe(res => {
+        if (!res.success) return;
+        this.events = res.data.map(a => ({
+          start: new Date(a.appointment_date),
+          title: a.status,
+          cssClass: this.getStatusClass(a.status)
+        }));
+      });
   }
 
-  /** your stats getters… */
-  getTotalAppointments(): number { /*…*/ }
-  getAveragePerWeek(): number        { /*…*/ }
-  getPeakWeek(): string             { /*…*/ }
-  getGrowthTrend(): string          { /*…*/ }
+  private getStatusClass(status: Appointment['status']) {
+    switch (status) {
+      case 'Approved': return 'approved-event';
+      case 'Pending':  return 'pending-event';
+      case 'Rejected': return 'rejected-event';
+      default:         return '';
+    }
+  }
+
+  refresh() {
+    this.loadChartData();
+    this.loadAppointments();
+  }
+
+  // … your four stat getters (getTotalAppointments(), etc.) …
 }
