@@ -1,0 +1,55 @@
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="summary-card">
+        <div class="summary-header">
+          <h6 class="summary-title">
+            <i class="bi bi-clipboard-data me-2"></i>
+            Quick Statistics
+          </h6>
+        </div>
+        <div class="summary-body">
+          <div class="row text-center">
+            <div class="col-md-3 col-sm-6 mb-3">
+              <div class="stat-item">
+                <div class="stat-number">{{ getTotalAppointments() }}</div>
+                <div class="stat-label">Total Appointments</div>
+              </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+              <div class="stat-item">
+                <div class="stat-number">{{ getAveragePerWeek() }}</div>
+                <div class="stat-label">Avg per Week</div>
+              </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+              <div class="stat-item">
+                <div class="stat-number">{{ getPeakWeek() }}</div>
+                <div class="stat-label">Peak Week</div>
+              </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+              <div class="stat-item">
+                <div class="stat-number">{{ getGrowthTrend() }}</div>
+                <div class="stat-label">Growth Trend</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- your existing chart section -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="dashboard-chart p-4" style="max-width: 600px; margin: auto;">
+        <h3>Weekly Appointments Overview</h3>
+        <canvas #appointmentsChart style="width: 100%; height: 300px;"></canvas>
+        <button class="btn btn-outline-primary btn-sm mt-2" (click)="refresh()">
+          Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
