@@ -1,0 +1,20 @@
+/* approved = green */
+.approved-date .mat-calendar-body-cell-content {
+  background-color: #28a745 !important;
+  color: white !important;
+  border-radius: 50% !important;
+}
+
+/* pending = yellow */
+.pending-date .mat-calendar-body-cell-content {
+  background-color: #ffc107 !important;
+  color: black    !important;
+  border-radius: 50% !important;
+}
+
+/* rejected = red */
+.rejected-date .mat-calendar-body-cell-content {
+  background-color: #dc3545 !important;
+  color: white    !important;
+  border-radius: 50% !important;
+}
